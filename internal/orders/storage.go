@@ -48,7 +48,7 @@ func NewStorage() *Storage {
 	}
 }
 
-// Notify notifies the storage about new order or udate for it
+// Notify notifies the storage about new order or an update for it
 func (s *Storage) Notify(order *entities.Order) {
 	s.Add(order)
 }
@@ -59,14 +59,13 @@ func (s *Storage) Add(order *entities.Order) {
 	defer s.mu.Unlock()
 	if order.RefId == 0 {
 		log.Printf("an order without RefId, ignore: %v", order)
-		// store only order with refId
+		// store only orders with refId
 		return
 	}
 	s.buffer[order.RefId] = order
 }
 
 // Remove removes an order from the storage
-// reference to order by its RefID
 func (s *Storage) Remove(refId int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
