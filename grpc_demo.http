@@ -1,0 +1,32 @@
+GRPC 127.0.0.1:5500/bth.Trader/AddOrder
+
+{
+  "pair": "XBT/EUR",
+  "direction": "buy",
+  "price": 20000.1,
+  "volume": 0.002
+}
+
+###
+
+GRPC 127.0.0.1:5500/bth.Trader/OrderStatus
+
+{
+  "refId": 1468395626
+}
+
+###
+
+GRPC 127.0.0.1:5500/bth.Trader/CancelOrder
+
+{
+  "refId": 1468395626
+}
+
+###
+
+GRPC 127.0.0.1:5500/bth.Trader/StreamOrders
+
+{}
+
+###

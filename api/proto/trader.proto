@@ -1,0 +1,48 @@
+syntax = "proto3";
+package bth;
+
+option go_package = "../bth";
+
+service Trader {
+  // AddOrder submits a new order on the exchange
+  rpc AddOrder(AddOrderRequest) returns (AddOrderResponse) {}
+  // CancelOrder cancels an open order
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse) {}
+  // OrderStatus request status of particular order
+  rpc OrderStatus(OrderStatusRequest) returns (OrderStatusResponse) {}
+  // StreamOrders opens stream to receive update on order statuses as they become available
+  rpc StreamOrders(Empty) returns (stream OrderStatusResponse) {}
+}
+
+message AddOrderRequest {
+  string pair = 1;
+  string direction = 2;
+  double price = 3;
+  double volume = 4;
+}
+
+message AddOrderResponse {
+  string status = 1;
+  int32 refId = 2;
+  string orderId = 3;
+}
+
+message CancelOrderRequest {
+  int32 refId = 1;
+}
+
+message CancelOrderResponse {
+  string status = 1;
+}
+
+message OrderStatusRequest {
+  int32 refId = 1;
+}
+
+message OrderStatusResponse {
+  int32 refId = 1;
+  string orderId = 2;
+  string status = 3;
+}
+
+message Empty{}
