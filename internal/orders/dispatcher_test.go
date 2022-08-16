@@ -2,132 +2,10 @@ package orders
 
 import (
 	"bth-trader/internal/entities"
+	"github.com/ltunc/go-observer/observer"
 	"reflect"
 	"testing"
 )
-
-type MockObserver struct {
-	Name string
-}
-
-func (m *MockObserver) Notify(_ *entities.Order) {
-}
-
-func TestStorage_Unsubscribe(t *testing.T) {
-	type fields struct {
-		subscribers []Observer
-	}
-	type args struct {
-		o Observer
-	}
-	observers := []Observer{&MockObserver{"M1"}, &MockObserver{"M2"}, &MockObserver{"M3"}}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []Observer
-	}{
-		{
-			name: "middle",
-			fields: fields{
-				subscribers: []Observer{observers[0], observers[1], observers[2]},
-			},
-			args: args{observers[1]},
-			want: []Observer{observers[0], observers[2]},
-		},
-		{
-			name: "last",
-			fields: fields{
-				subscribers: []Observer{observers[0], observers[1], observers[2]},
-			},
-			args: args{observers[2]},
-			want: []Observer{observers[0], observers[1]},
-		},
-		{
-			name: "first",
-			fields: fields{
-				subscribers: []Observer{observers[0], observers[1], observers[2]},
-			},
-			args: args{observers[0]},
-			want: []Observer{observers[1], observers[2]},
-		},
-		{
-			name: "not existing",
-			fields: fields{
-				subscribers: []Observer{observers[0], observers[1], observers[2]},
-			},
-			args: args{&MockObserver{"U1"}},
-			want: observers,
-		},
-		{
-			name: "empty",
-			fields: fields{
-				subscribers: []Observer{},
-			},
-			args: args{&MockObserver{"U1"}},
-			want: []Observer{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := &Dispatcher{
-				subscribers: tt.fields.subscribers,
-			}
-			d.Unsubscribe(tt.args.o)
-			got := d.subscribers
-			if !reflect.DeepEqual(tt.want, got) {
-				t.Errorf("Unsubscribe() expected subscribers list %v, got %v", tt.want, got)
-			}
-		})
-	}
-}
-
-func TestStorage_Subscribe(t *testing.T) {
-	type fields struct {
-		subscribers []Observer
-	}
-	type args struct {
-		o Observer
-	}
-	observers := []Observer{&MockObserver{"M1"}, &MockObserver{"M2"}, &MockObserver{"M3"}}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []Observer
-	}{
-		{
-			"empty",
-			fields{subscribers: []Observer{}},
-			args{observers[1]},
-			[]Observer{observers[1]},
-		},
-		{
-			"not empty",
-			fields{subscribers: []Observer{observers[0], observers[1]}},
-			args{observers[2]},
-			observers,
-		},
-		{
-			"existing",
-			fields{subscribers: []Observer{observers[0], observers[1], observers[2]}},
-			args{observers[1]},
-			observers,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := &Dispatcher{
-				subscribers: tt.fields.subscribers,
-			}
-			d.Subscribe(tt.args.o)
-			got := d.subscribers
-			if !reflect.DeepEqual(tt.want, got) {
-				t.Errorf("Subscribe() expected subscribers list %#v, got %#v", tt.want, got)
-			}
-		})
-	}
-}
 
 func TestWaiter_Wait(t *testing.T) {
 	type fields struct {
@@ -173,6 +51,50 @@ func TestWaiter_Wait(t *testing.T) {
 			}
 			if got := w.Wait(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Wait() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+type mockObserver struct {
+	calls []*entities.Order
+}
+
+func (m *mockObserver) Notify(o *entities.Order) {
+	m.calls = append(m.calls, o)
+}
+
+func TestReadFrom(t *testing.T) {
+	type args struct {
+		dispatcher *observer.Subject[*entities.Order]
+		input      chan *entities.Order
+	}
+	orders := []*entities.Order{{OrderId: "AA10", RefId: 10}, {OrderId: "AA11", RefId: 11}}
+	tests := []struct {
+		name       string
+		args       args
+		sendOrders []*entities.Order
+	}{
+		{
+			"basic",
+			args{
+				dispatcher: &observer.Subject[*entities.Order]{},
+				input:      make(chan *entities.Order, 10),
+			},
+			[]*entities.Order{orders[0], orders[1]},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, o := range tt.sendOrders {
+				tt.args.input <- o
+			}
+			close(tt.args.input)
+			obs := &mockObserver{}
+			tt.args.dispatcher.Subscribe(obs)
+			ReadFrom(tt.args.dispatcher, tt.args.input)
+			if got := obs.calls; !reflect.DeepEqual(got, tt.sendOrders) {
+				t.Errorf("ReadFrom() got calls %v, want %v", got, tt.sendOrders)
 			}
 		})
 	}

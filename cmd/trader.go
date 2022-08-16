@@ -9,6 +9,7 @@ import (
 	"bth-trader/internal/server"
 	"bth-trader/internal/utils/env"
 	"fmt"
+	"github.com/ltunc/go-observer/observer"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -38,11 +39,11 @@ func main() {
 	}
 	go decoder.DecodeStream(ws.Stream(), out)
 	go consume(out)
-	od := &orders.Dispatcher{}
+	od := orders.NewDispatcher()
 	storage := orders.NewStorage()
 	go runStorageGc(storage)
 	od.Subscribe(storage)
-	go od.ReadFrom(out.Orders)
+	go orders.ReadFrom(od, out.Orders)
 	lis, err := net.Listen("tcp", env.Get("GRPC_LISTEN", "127.0.0.1:5500"))
 	if err != nil {
 		log.Fatalf("cannot open port: %v", err)
@@ -79,7 +80,7 @@ func runStorageGc(s *orders.Storage) {
 }
 
 // runGrpc prepares and starts gRPC server
-func runGrpc(lis net.Listener, ws *kraken.WsClient, t *kraken.WsAuthToken, dispatcher *orders.Dispatcher, storage *orders.Storage) {
+func runGrpc(lis net.Listener, ws *kraken.WsClient, t *kraken.WsAuthToken, dispatcher *observer.Subject[*entities.Order], storage *orders.Storage) {
 	var opts []grpc.ServerOption
 	srv := grpc.NewServer(opts...)
 	bth.RegisterTraderServer(srv, server.NewTraderServer(ws, t, dispatcher, storage))

@@ -6,6 +6,7 @@ import (
 	"bth-trader/internal/kraken"
 	"bth-trader/internal/orders"
 	"context"
+	"github.com/ltunc/go-observer/observer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
@@ -18,11 +19,11 @@ type TraderServer struct {
 	ws      *kraken.WsClient
 	token   *kraken.WsAuthToken
 	rnd     *rand.Rand
-	od      *orders.Dispatcher
+	od      *observer.Subject[*entities.Order]
 	storage *orders.Storage
 }
 
-func NewTraderServer(ws *kraken.WsClient, token *kraken.WsAuthToken, od *orders.Dispatcher, storage *orders.Storage) *TraderServer {
+func NewTraderServer(ws *kraken.WsClient, token *kraken.WsAuthToken, od *observer.Subject[*entities.Order], storage *orders.Storage) *TraderServer {
 	return &TraderServer{
 		ws:      ws,
 		token:   token,
