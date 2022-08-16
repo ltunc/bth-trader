@@ -16,7 +16,7 @@ _all parameters have prefix `BTH_`_
 
 ## Build
 
-    build-prod
+    make build-prod
 
 or 
 
